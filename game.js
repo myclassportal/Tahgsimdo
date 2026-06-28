@@ -1,3 +1,9 @@
+const CONFIG = {
+    school: 'دبستان معاد خرگوشی',
+    pvLabels: ['هـ', 'ص', 'د', 'ی'], 
+    pvClasses: ['color-h', 'color-s', 'color-d', 'color-y']
+};
+
 let STORAGE = 'studentProfile_TaqsimTwoDigit_Default';
 let GAME_STATE_STORAGE = 'gameState_TaqsimTwoDigit_Default';
 
