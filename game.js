@@ -29,6 +29,10 @@ const app = {
                 el.style.display = '';
             }
         });
+        const tutBar = getEl('tutorial-bar');
+        if (tutBar) {
+            tutBar.classList.add('hidden');
+        }
         const target = document.getElementById(id);
         if (target) {
             target.classList.remove('hidden');
@@ -1342,7 +1346,7 @@ const game = {
             });
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
+        function initApp() {
             app.init();
             window.addEventListener('beforeunload', () => {
                 if (app.state && app.state.user) app.save();
@@ -1375,4 +1379,10 @@ const game = {
                     }
                 };
             }
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
