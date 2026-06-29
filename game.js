@@ -1233,6 +1233,10 @@ const game = {
         };
 
         window.retryAuthentication = function() {
+            const errSec = document.getElementById('portal-error-section');
+            const regSec = document.getElementById('register-container');
+            if (errSec) errSec.style.display = 'none';
+            if (regSec) regSec.style.display = 'block';
             authenticatePortalStudent();
         };
 
@@ -1240,6 +1244,8 @@ const game = {
             await Portal.authenticate({
                 onSuccess: (data) => {
                     try {
+                        const regSec = document.getElementById('register-container');
+                        if (regSec) regSec.style.display = '';
                         document.getElementById('portal-welcome-section').style.display = '';
                         document.getElementById('startGame').style.display = '';
                         document.getElementById('portal-error-section').style.display = 'none';
@@ -1303,13 +1309,12 @@ const game = {
                             app.showScreen('screen-assistant');
                         } else if (app.state.reportShown) {
                             app.showScreen('screen-report');
-                        } else if (game.dividend && activeState) {
+                        } else if (activeState) {
                             try {
                                 app.showScreen('screen-game');
-                                game.loadState();
+                                game.restore();
                             } catch (ex) {
                                 game.clearState();
-                                game.dividend = 0;
                                 app.state.reportShown = false;
                                 app.save();
                                 app.showScreen('screen-register');
@@ -1360,7 +1365,7 @@ const game = {
                         app.state.reportShown = false;
                         const activeState = checkSavedUnfinishedState();
                         if (activeState) {
-                            game.loadState();
+                            game.restore();
                         } else {
                             game.start();
                         }
