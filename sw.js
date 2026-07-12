@@ -1,4 +1,4 @@
-const CACHE_NAME = 'taqsim-2digit-game-v1';
+const CACHE_NAME = 'taqsim-2digit-game-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -38,8 +38,8 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  if (e.request.url.includes('supabase.co')) {
-    e.respondWith(fetch(e.request));
+  const url = new URL(e.request.url);
+  if (url.origin !== self.location.origin) {
     return;
   }
 
@@ -57,7 +57,9 @@ self.addEventListener('fetch', (e) => {
           cache.put(e.request, responseToCache);
         });
         return networkResponse;
-      }).catch(() => {});
+      });
+    }).catch(() => {
+      return caches.match('./index.html');
     })
   );
 });
