@@ -265,7 +265,7 @@ const game = {
                     bdBox = getEl(`r-${this.stage-1}-${this.stage}`);
                 }
 
-                if (bdBox && (!bdBox.innerText || bdBox.classList.contains('invisible-box'))) {
+                if (bdBox && !bdBox.classList.contains('has-val') && !bdBox.classList.contains('invisible-box')) {
                     bdBox.innerText = toPersian(this.digits[this.stage]);
                     bdBox.classList.remove('invisible-box');
                     bdBox.classList.add('has-val');
@@ -274,15 +274,70 @@ const game = {
 
             for (let i = 0; i < 4; i++) {
                 const qBox = getEl(`q-${i}`);
-                if (qBox && qBox.innerText.trim() !== '') {
-                    if (i < this.stage) qBox.classList.add('correct', 'readonly');
-                    else if (i === this.stage && this.subStep !== 'SELECT') {
-                        const val = parseInt(toEnglish(qBox.innerText));
-                        const total = this.getCurrentTotal();
-                        const placeVal = Math.pow(10, 3 - i);
-                        const correctQ = Math.floor(total / (this.divisor * placeVal));
-                        const maxQ = correctQ > 9 ? 9 : correctQ;
-                        if (val === maxQ) qBox.classList.add('correct', 'readonly'); else qBox.classList.add('wrong');
+                if (qBox && qBox.classList.contains('has-val')) {
+                    if (i < this.stage) {
+                        qBox.classList.add('correct', 'readonly');
+                    } else if (i === this.stage) {
+                        if (this.subStep === 'SUBTRACT' || this.subStep === 'BRING_DOWN' || this.subStep === 'FINISH') {
+                            qBox.classList.add('correct', 'readonly');
+                        } else if (this.subStep === 'MULTIPLY_P' && this.isResetState) {
+                            const val = parseInt(toEnglish(qBox.innerText));
+                            const total = this.getCurrentTotal();
+                            const placeVal = Math.pow(10, 3 - i);
+                            const correctQ = Math.floor(total / (this.divisor * placeVal));
+                            const maxQ = correctQ > 9 ? 9 : correctQ;
+                            if (val === maxQ) qBox.classList.add('correct'); else qBox.classList.add('wrong');
+                            
+                            const expectedProdStr = String(val * this.divisor);
+                            const endCol = this.stage;
+                            const startCol = endCol - expectedProdStr.length + 1;
+                            for (let j = 0; j < 4; j++) {
+                                const box = getEl(`p-${this.stage}-${j}`);
+                                if (box && !box.classList.contains('invisible-box') && box.classList.contains('has-val')) {
+                                    const bVal = toEnglish(box.innerText);
+                                    const charIdx = j - startCol;
+                                    if (charIdx >= 0 && bVal === expectedProdStr[charIdx]) box.classList.add('correct');
+                                    else box.classList.add('wrong');
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (this.subStep === 'SUBTRACT' && this.isResetState) {
+                 const q = this.mathSteps[this.stage].q;
+                 const placeVal = Math.pow(10, 3 - this.stage);
+                 const total = this.getCurrentTotal();
+                 const prod = q * this.divisor * placeVal;
+                 const rem = total - prod;
+                 for (let i = 0; i <= this.stage; i++) {
+                     const box = getEl(`r-${this.stage}-${i}`);
+                     if (!box || box.classList.contains('invisible-box') || !box.classList.contains('has-val')) continue;
+                     const valStr = toEnglish(box.innerText).trim();
+                     const expectedDigit = Math.floor(rem / Math.pow(10, 3 - i)) % 10;
+                     if (valStr === '0' || valStr === '۰') {
+                         if (expectedDigit === 0) box.classList.add('correct'); else box.classList.add('wrong');
+                     } else {
+                         const val = parseInt(valStr);
+                         if (val === expectedDigit) box.classList.add('correct'); else box.classList.add('wrong');
+                     }
+                 }
+                 const lastBox = getEl(`r-${this.stage}-${this.stage}`);
+                 if (rem === 0 && lastBox && lastBox.classList.contains('has-val')) {
+                      const valStr = toEnglish(lastBox.innerText).trim();
+                      if (valStr !== '0' && valStr !== '۰') {
+                          lastBox.classList.add('wrong');
+                      }
+                 }
+            }
+
+            if (this.subStep === 'MULTIPLY_P' && !this.isResetState) {
+                this.inputQueue = [];
+                for (let j = this.stage; j >= 0; j--) {
+                    const b = getEl(`p-${this.stage}-${j}`);
+                    if (b && !b.classList.contains('invisible-box') && !b.classList.contains('has-val')) {
+                        this.inputQueue.push(b.id);
                     }
                 }
             }
@@ -306,18 +361,51 @@ const game = {
                 if (this.subStep === 'SELECT') {
                      this.msg(`بازیابی شد. نوبت رقم ${CONFIG.pvLabels[this.stage]} است.`);
                      this.updateSelectHighlight();
+                     getEl('est-button').classList.add('hidden');
                 } else if (this.subStep === 'BRING_DOWN') {
                      this.msg('بازیابی شد. رقم بعدی را پایین بیاور.');
                      this.updateSelectHighlight();
+                     getEl('est-button').classList.remove('hidden');
                 } else if (this.subStep === 'QUOTIENT') {
                     this.msg('بازیابی شد. تقسیم کن.');
                     const qBox = getEl(`q-${this.stage}`);
                     if (!qBox.classList.contains('correct')) getEl('est-button').classList.remove('hidden');
                     this.showBracket(this.stage);
+                } else if (this.subStep === 'MULTIPLY_P') {
+                    if (this.isResetState) {
+                        this.msg('خطا وجود دارد. دکمه قرمز را برای شروع مجدد بزن.', true);
+                    } else {
+                        if (this.inputQueue && this.inputQueue.length > 0) {
+                            this.msg('بازیابی شد. حالا ضرب کن (بدون صفرهای اضافی).');
+                            this.processNextInput();
+                        } else {
+                            this.msg('حالا دکمه بررسی را بزن تا حاصل‌ضرب تأیید شود.');
+                        }
+                    }
+                    getEl('est-button').classList.remove('hidden');
+                    this.showBracket(this.stage);
+                } else if (this.subStep === 'SUBTRACT') {
+                    if (this.isResetState) {
+                        this.msg('بعضی ارقام تفریق اشتباه هستند. دکمه قرمز را برای شروع مجدد بزن.', true);
+                    } else {
+                        this.msg('بازیابی شد. حالا تفریق کن.');
+                        for (let j = this.stage; j >= 0; j--) {
+                            const b = getEl(`r-${this.stage}-${j}`);
+                            if (b && !b.classList.contains('invisible-box') && !b.classList.contains('has-val')) {
+                                this.activate(b.id);
+                                break;
+                            }
+                        }
+                    }
+                    getEl('est-button').classList.remove('hidden');
+                    this.showBracket(this.stage);
+                } else if (this.subStep === 'FINISH') {
+                    this.msg('بازیابی شد. دکمه بررسی را بزن.');
+                    getEl('est-button').classList.add('hidden');
                 }
             } else {
                 if(this.subStep === 'SELECT' || this.subStep === 'BRING_DOWN') this.updateSelectHighlight();
-                if(this.subStep === 'QUOTIENT') this.showBracket(this.stage);
+                if(this.subStep === 'QUOTIENT' || this.subStep === 'MULTIPLY_P' || this.subStep === 'SUBTRACT') this.showBracket(this.stage);
             }
             
         } catch (e) { console.error(e); this.start(); }
@@ -630,11 +718,11 @@ const game = {
             clearActiveBox() { 
                 if(this.activeBox) { 
                     const el = getEl(this.activeBox);
-                    el.innerText = ''; 
                     el.classList.remove('has-val');
                     
                     const parts = this.activeBox.split('-');
                     if (parts.length === 3) {
+                        el.innerText = ''; 
                         const type = parts[0];
                         const s = parseInt(parts[1]);
                         const i = parseInt(parts[2]);
@@ -643,6 +731,10 @@ const game = {
                     } else if (parts.length === 2 && parts[0] === 'q') {
                         const s = parseInt(parts[1]);
                         this.mathSteps[s].q = null;
+                        el.className = `box ${CONFIG.pvClasses[s]}`;
+                        el.innerHTML = `<span class="pv-label">${CONFIG.pvLabels[s]}</span><span class="val"></span>`;
+                    } else {
+                        el.innerText = '';
                     }
                     this.updateCheckBtn();
                     this.saveProgress();
@@ -715,13 +807,13 @@ const game = {
                 
                 if (this.subStep === 'MULTIPLY_P') {
                     const qBox = getEl(`q-${this.stage}`);
-                    const qFilled = qBox && qBox.innerText.trim() !== '';
+                    const qFilled = qBox && qBox.classList.contains('has-val');
                     const pRow = getEl(`row-p-${this.stage}`);
-                    const pFilled = pRow ? Array.from(pRow.querySelectorAll('.box:not(.invisible-box)')).every(b => b.innerText.trim() !== '') : false;
+                    const pFilled = pRow ? Array.from(pRow.querySelectorAll('.box:not(.invisible-box)')).every(b => b.classList.contains('has-val')) : false;
                     btn.disabled = !(qFilled && pFilled);
                 } else if (this.subStep === 'SUBTRACT') {
                     const rRow = getEl(`row-r-${this.stage}`);
-                    const rFilled = rRow ? Array.from(rRow.querySelectorAll('.box:not(.invisible-box)')).every(b => b.innerText.trim() !== '') : false;
+                    const rFilled = rRow ? Array.from(rRow.querySelectorAll('.box:not(.invisible-box)')).every(b => b.classList.contains('has-val')) : false;
                     btn.disabled = !rFilled;
                 } else {
                     btn.disabled = true;
@@ -815,12 +907,12 @@ const game = {
                     
                     for (let i = 0; i <= this.stage; i++) {
                         const box = getEl(`r-${this.stage}-${i}`);
-                        if (!box || box.classList.contains('invisible-box')) continue;
+                        if (!box || box.classList.contains('invisible-box') || !box.classList.contains('has-val')) continue;
                         
                         const valStr = toEnglish(box.innerText).trim();
                         const expectedDigit = Math.floor(rem / Math.pow(10, 3 - i)) % 10;
                         
-                        if (valStr === '' || valStr === '0' || valStr === '۰') {
+                        if (valStr === '0' || valStr === '۰') {
                              if (expectedDigit === 0) {
                                  box.classList.add('correct', 'readonly'); box.classList.remove('wrong');
                              } else {
@@ -839,7 +931,7 @@ const game = {
 
                     if (rem === 0) {
                          const lastBox = getEl(`r-${this.stage}-${this.stage}`);
-                         if (lastBox) {
+                         if (lastBox && lastBox.classList.contains('has-val')) {
                              const val = toEnglish(lastBox.innerText).trim();
                              if (val !== '0' && val !== '۰') {
                                  lastBox.classList.add('wrong'); hasError = true;
