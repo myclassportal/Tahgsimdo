@@ -1,12 +1,26 @@
-const CACHE_NAME = 'taqsim-2digit-game-v2';
+const CACHE_NAME = 'taqsim-2digit-game-v1';
+
+const SOUND_ASSETS = [
+  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+  '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
+  '20', '30', '40', '50', '60', '70', '80', '90',
+  '100', '200', '300', '400', '500', '600', '700', '800', '900',
+  'va', 'dar', 'ba', 'taqsim_bar', 'zarb_dar', 'mishe', 'hodoodan_mishe',
+  'ro_minevisim', 'ro_mibarim_bala', 'enteqal_mishe',
+  'entekhab_aval', 'entekhab_baadi', 'paeen_avordan', 'sefr_kharej_qesmat',
+  'qarz_kenari', 'qarz_sefr', 'tafriq_kon', 'payan_taqsim'
+].map(name => `./sounds/${name}.mp3`);
+
 const ASSETS = [
   './',
   './index.html',
   './game.js',
   './game-db.js',
   './supabase.js',
+  './game-audio.js',
   './Vazirmatn-Regular.woff2',
-  './Vazirmatn-Bold.woff2'
+  './Vazirmatn-Bold.woff2',
+  ...SOUND_ASSETS
 ];
 
 self.addEventListener('install', (e) => {
